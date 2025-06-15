@@ -442,23 +442,81 @@ def merge_macro(df: pd.DataFrame, macro: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def impute_missing(df: pd.DataFrame) -> pd.DataFrame:
-    num_cols = df.select_dtypes(include=[np.number]).columns
-    cat_cols = df.select_dtypes(include=['object', 'bool', 'category']).columns
+def convert_distance(val):
+    if pd.isna(val):
+        return np.nan
+    if isinstance(val, (int, float)):
+        return val
+    s = str(val).strip().lower()
+    if 'мин' in s:
+        num = float(s.replace('мин', '').strip())
+        return num * 0.06
+    if 'м' in s and 'км' not in s:
+        num = float(s.replace('м', '').strip())
+        return num / 1000
+    if 'км' in s:
+        return float(s.replace('км', '').strip())
+    try:
+        return float(s)
+    except:
+        return np.nan
 
+synonyms = {
+    'material': {
+        'панельный':'панель','панель':'панель',
+        'монолитный':'монолит','монолит':'монолит',
+        'кирпичный':'кирпич','кирпич':'кирпич',
+        'деревянный':'дерево','дерево':'дерево',
+        'газобетонный':'газобетон','газобетон':'газобетон',
+        'керамзитобетонный':'керамзитобетон','керамзитобетон':'керамзитобетон',
+        'брус':'брус'
+    },
+    'house_type': {'новостройка':'новостройка','вторичка':'вторичка','бу':'вторичка'},
+    'renovation': {
+        'без':'без','без ремонта':'без',
+        'косметический':'косметический','косметический ремонт':'косметический',
+        'капитальный':'капитальный','капитальный ремонт':'капитальный',
+        'дизайнерский':'дизайнерский','дизайнерский ремонт':'дизайнерский'
+    },
+    'layout': {'изолированная':'изолированные','изолированные':'изолированные',
+               'смежная':'смежные','смежные':'смежные'},
+    'view': {'во двор':'во двор','на улицу':'на улицу','панорамный':'панорамный'}
+}
+
+def impute_missing(df: pd.DataFrame) -> pd.DataFrame:
+    thresh = int(0.7 * df.shape[1])
+    df = df.dropna(thresh=thresh).copy()
+
+    for col in ['distance_to_center_km', 'distance_to_metro_km']:
+        df[col] = df[col].apply(convert_distance)
+
+    cat_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+    if 'date_listed' in cat_cols:
+        cat_cols.remove('date_listed')
+    for col in cat_cols:
+        if col in synonyms:
+            df[col] = df[col].astype(str).str.lower().map(synonyms[col]).fillna(df[col])
+        df[col] = df.groupby('region')[col] \
+                     .apply(lambda x: x.fillna(x.mode().iloc[0] if not x.mode().empty else np.nan))
+        df[col].fillna(df[col].mode().iloc[0], inplace=True)
+
+    num_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if 'price_rub' in num_cols:
+        num_cols.remove('price_rub')
     imputer_num = KNNImputer(n_neighbors=5)
     df[num_cols] = imputer_num.fit_transform(df[num_cols])
 
-    imputer_cat = SimpleImputer(strategy='most_frequent')
-    df[cat_cols] = imputer_cat.fit_transform(df[cat_cols])
     return df
 
+def remove_outliers(df: pd.DataFrame, numeric_cols: list) -> pd.DataFrame:
+    df = df.copy()
+    df = df[(df['area_sqm'] >= 10) & (df['price_rub'] <= 200e6)]
 
-def remove_outliers(df: pd.DataFrame, numeric_cols: List[str]) -> pd.DataFrame:
     Q1 = df[numeric_cols].quantile(0.25)
     Q3 = df[numeric_cols].quantile(0.75)
     IQR = Q3 - Q1
-    mask_iqr = ~((df[numeric_cols] < (Q1 - 1.5 * IQR)) | (df[numeric_cols] > (Q3 + 1.5 * IQR))).any(axis=1)
+    mask_iqr = ~((df[numeric_cols] < (Q1 - 1.5 * IQR)) |
+                 (df[numeric_cols] > (Q3 + 1.5 * IQR))).any(axis=1)
 
     z_scores = np.abs((df[numeric_cols] - df[numeric_cols].mean()) / df[numeric_cols].std())
     mask_z = ~(z_scores > 3).any(axis=1)
@@ -466,29 +524,34 @@ def remove_outliers(df: pd.DataFrame, numeric_cols: List[str]) -> pd.DataFrame:
     df_clean = df[mask_iqr & mask_z].reset_index(drop=True)
     return df_clean
 
+def encode_and_scale(df: pd.DataFrame) -> tuple:
+    df = df.copy()
+    y = np.log1p(df['price_rub'].values)
 
-def encode_and_scale(df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:
-    y = df['price_rub'].values
-    X = df.drop(columns=['price_rub', 'some_id', 'date_listed'])
+    X = df.drop(columns=['price_rub', 'date_listed', 'link'], errors='ignore')
 
-    cat_cols = X.select_dtypes(include=['object', 'bool', 'category']).columns.tolist()
-    num_cols = X.select_dtypes(include=[np.number]).columns.tolist()
+    cat_oh = ['region', 'house_type', 'material', 'layout', 'view']
+    cat_ord = ['renovation']
+    num_cols = [c for c in X.columns
+                if c not in cat_oh + cat_ord and X[c].dtype in [np.number, 'bool']]
 
-    if 'repair_level' in cat_cols:
-        ordinal_map = ['none', 'cosmetic', 'capital', 'designer']
-        ord_enc = OrdinalEncoder(categories=[ordinal_map])
-        X[['repair_level']] = ord_enc.fit_transform(X[['repair_level']])
-        cat_cols.remove('repair_level')
+    ord_map = ['без', 'косметический', 'капитальный', 'дизайнерский']
+    ord_enc = OrdinalEncoder(categories=[ord_map])
+    X['renovation'] = ord_enc.fit_transform(X[['renovation']])
 
-    onehot = OneHotEncoder(sparse=False, handle_unknown='ignore')
-    oh = onehot.fit_transform(X[cat_cols])
-    oh_cols = onehot.get_feature_names_out(cat_cols)
-    df_oh = pd.DataFrame(oh, columns=oh_cols, index=X.index)
+    for skew_col in ['income_level']:
+        X[skew_col] = np.log1p(X[skew_col])
+
+    oh_enc = OneHotEncoder(sparse=False, handle_unknown='ignore')
+    oh_arr = oh_enc.fit_transform(X[cat_oh])
+    oh_cols = oh_enc.get_feature_names_out(cat_oh)
+    df_oh = pd.DataFrame(oh_arr, columns=oh_cols, index=X.index)
 
     scaler = MinMaxScaler()
-    X_num = scaler.fit_transform(X[num_cols])
+    X_num = scaler.fit_transform(X[num_cols + cat_ord])
 
     X_final = np.hstack([X_num, df_oh.values])
+
     return X_final, y
 
 
