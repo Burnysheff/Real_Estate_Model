@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Predict Real Estate Price</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 2rem; max-width: 600px; }
+    label { display: block; margin: .5rem 0; }
+    input, select { width: 100%; padding: .4rem; margin-top: .2rem; }
+    button { margin-top: 1rem; padding: .6rem 1.2rem; }
+    #result { margin-top: 1.5rem; font-size: 1.2rem; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Оценка стоимости квартиры</h1>
+  <form id="predict-form">
+    <label>Регион
+      <input name="region" type="text" required>
+    </label>
+    <label>Площадь (м²)
+      <input name="area_sqm" type="number" step="0.1" required>
+    </label>
+    <label>Этаж / Всего этажей
+      <input name="floor" type="number" min="1" required style="width:48%; display:inline-block;">
+      <input name="total_floors" type="number" min="1" required style="width:48%; display:inline-block; float:right;">
+    </label>
+    <label>Год постройки
+      <input name="year_built" type="number" required>
+    </label>
+    <label>Тип жилья
+      <select name="house_type" required>
+        <option value="новостройка">новостройка</option>
+        <option value="вторичка">вторичка</option>
+      </select>
+    </label>
+    <label>Материал стен
+      <input name="material" type="text" required>
+    </label>
+    <label>Ремонт
+      <input name="renovation" type="text" required>
+    </label>
+    <label>Высота потолков (м)
+      <input name="ceiling_height_m" type="number" step="0.1" required>
+    </label>
+    <label>Планировка
+      <input name="layout" type="text" required>
+    </label>
+    <label>
+      <input name="has_balcony" type="checkbox"> Балкон/лоджия
+    </label>
+    <label>Вид из окон
+      <input name="view" type="text" required>
+    </label>
+    <label>
+      <input name="has_parking" type="checkbox"> Парковка
+    </label>
+
+    <label>До центра (км)
+      <input name="distance_to_center_km" type="number" step="0.1" required>
+    </label>
+    <label>До метро (км)
+      <input name="distance_to_metro_km" type="number" step="0.1" required>
+    </label>
+    <label>Уровень преступности
+      <input name="crime_rate" type="number" step="0.1" required>
+    </label>
+    <label>Соц. объектов
+      <input name="infra_objects" type="number" required>
+    </label>
+    <label>Плотность застройки
+      <input name="building_density" type="number" step="0.1" required>
+    </label>
+    <label>Доход в районе
+      <input name="income_level" type="number" step="1000" required>
+    </label>
+    <label>Доля аренды (0–1)
+      <input name="rental_share" type="number" step="0.01" min="0" max="1" required>
+    </label>
+    <label>Новостроек (шт)
+      <input name="new_housing_delivery" type="number" required>
+    </label>
+
+    <label>Курс USD/RUB
+      <input name="dollar_rate" type="number" step="0.01" required>
+    </label>
+    <label>Курс EUR/RUB
+      <input name="euro_rate" type="number" step="0.01" required>
+    </label>
+    <label>Ставка ЦБ, %
+      <input name="key_rate" type="number" step="0.01" required>
+    </label>
+    <label>ИПЦ, %
+      <input name="cpi" type="number" step="0.01" required>
+    </label>
+    <label>PMI, %
+      <input name="pmi" type="number" step="0.1" required>
+    </label>
+    <label>Индекс MOEX
+      <input name="moex_index" type="number" step="1" required>
+    </label>
+    <label>Neфть Brent ($/баррель)
+      <input name="oil_price" type="number" step="0.1" required>
+    </label>
+    <label>Безработица, %
+      <input name="unemployment" type="number" step="0.01" required>
+    </label>
+    <label>Рост ВВП, %
+      <input name="gdp_growth" type="number" step="0.01" required>
+    </label>
+    <label>Ипотечная ставка, %
+      <input name="mortgage_rate" type="number" step="0.01" required>
+    </label>
+    <label>Доверие потребителей, %
+      <input name="consumer_confidence" type="number" step="0.1" required>
+    </label>
+    <label>Закредитованность (%)
+      <input name="households_debt_to_gdp" type="number" step="0.1" required>
+    </label>
+
+    <label>Ваша цена (₽)
+      <input name="real_price" type="number" step="1000">
+    </label>
+
+    <button type="submit">Предсказать</button>
+  </form>
+
+  <div id="result"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
