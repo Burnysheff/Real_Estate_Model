@@ -1,12 +1,10 @@
-import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
-import numpy as np
 import torch
 
 from .schemas import RealEstateFeatures
-from .model_utils import model, preprocess
+from backend.model.model_utils import model, preprocess
 
 app = FastAPI(title="Real Estate Pricing API")
 
