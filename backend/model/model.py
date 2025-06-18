@@ -13,7 +13,7 @@ from lime.lime_tabular import LimeTabularExplainer
 
 # Импортируем всё, что нужно для работы с данными и моделью
 from dataset import (
-    load_data,               # чтение исходного CSV или парсинг
+    load_data,               # чтение исходного CSV
     collect_macro_features,  # сбор макроэкономических признаков
     merge_macro,             # объединение с макроданными
     impute_missing,          # заполнение пропусков
@@ -27,7 +27,7 @@ from dataset import (
 # Конфигурация: пути и логирование
 # -----------------------------------------------------------
 
-# Путь к вашему CSV с уже сгенерированными данными
+# Путь к CSV с уже сгенерированными данными
 DATA_PATH = "backend/model/artifacts/real_estate_8.csv"
 
 # Папка, в которую сохраняем веса обученной модели
