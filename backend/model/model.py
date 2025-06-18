@@ -226,7 +226,7 @@ def main():
     # 1) Загрузка данных из CSV
     df = load_data(DATA_PATH)
 
-    # Если нужно было бы добавить макроэкономику:
+    # Добавление макроэкономики:
     # dates = df['date_listed'].dt.to_pydatetime().tolist()
     # if os.path.exists(MACRO_CACHE):
     #     macro = pd.read_csv(MACRO_CACHE, index_col='date', parse_dates=['date'])
